@@ -1,0 +1,25 @@
+<module>
+  <rawname>music_man</rawname>
+  <repo>standard</repo>
+  <name>Music Man</name>
+  <version>13.0.1a</version>
+	<publisher>Sangoma Technologies Corporation</publisher>
+	<license>GPLv3+</license>
+	<licenselink>http://www.gnu.org/licenses/gpl-3.0.txt</licenselink>
+  <candisable>no</candisable>
+  <canuninstall>no</canuninstall>
+  <category>Settings</category>
+  <description>Music Man - Test of BMore class</description>
+	<changelog>
+		*13.0.1* Test
+	</changelog>
+  <menuitems>
+    <music_man>Music Man</music_man>
+  </menuitems>
+  <depends>
+    <module>framework ge 13.0.121</module>
+  </depends>
+  <supported>
+    <version>13.0</version>
+  </supported>
+</module>
