@@ -4,69 +4,6 @@
 
 //namespace FreePBX\libraries;
 
-// HTML GENERATION UTILS
-
-// generate unique id
-function getId($prefix)
-{
-	global $count;
-	return $prefix.++$count;
-}
-
-// generate smartly formatted html tags with params and optional content
-function htmlTag($tag, $params=array(), $content = false)
-{
-	if (!is_array($params)) {
-		if ($params) {
-			$params = array('class' => $params);
-		} else {
-			$params = array();
-		}
-	}
-	if (array_key_exists('class', $params) && is_array($params['class'])) {
-		$params['class'] = implode(' ', $params['class']);
-	}
-
-
-	$html = '<' . $tag;
-
-	$just_tag = strstr($tag, ' ', true);
-	if ($just_tag) {
-		$tag = $just_tag;
-	}
-
-	foreach ($params as $name => $value) {
-		if ($value === false) {
-			continue;
-		}
-		$html .= ' ' . $name;
-		if ($value === true) {
-			continue;
-		}
-		$html .= '="' . $value . '"';
-	}
-	$html .= '>';
-
-	if ($content !== false) {
-		if (strlen($content) > 40 && $tag != 'li') {
-			$content = str_replace("\n", "\n  ", "\n" . $content) . "\n";
-		}
-		$html .= $content;
-		$html .= '</' . $tag .'>';
-	}
-	return $html;
-}
-
-// make [icon]'s come alive
-function htmlIconize($label)
-{
-	return preg_replace_callback('|\[[^]]*\]|',
-		function ($icon) {
-			return '<i class="fa fa-' . substr($icon[0], 1, -1) . '"></i>';
-		},
-		$label);
-}
-
 class BMoreContext {
 	public $table_name;
 	public $view_name;
@@ -74,7 +11,9 @@ class BMoreContext {
 	public $view;
 }
 
-class BMore {
+class BMore extends \FreePBX_Helpers {
+	private $unique_id_count;
+
 	// preset defaults
 	public function __construct()
 	{
@@ -90,6 +29,68 @@ class BMore {
 			'table' => $this->context->table_name,
 			'view' => $this->context->view_name,
 		);
+	}
+
+	// UTILITY FUNCTIONS
+
+	// generate unique id
+	function getId($prefix)
+	{
+		return $prefix.++$unique_id_count;
+	}
+
+	// generate smartly formatted html tags with params and optional content
+	public function tag($tag, $params=array(), $content = false)
+	{
+		if (!is_array($params)) {
+			if ($params) {
+				$params = array('class' => $params);
+			} else {
+				$params = array();
+			}
+		}
+		if (array_key_exists('class', $params) && is_array($params['class'])) {
+			$params['class'] = implode(' ', $params['class']);
+		}
+
+
+		$html = '<' . $tag;
+
+		$just_tag = strstr($tag, ' ', true);
+		if ($just_tag) {
+			$tag = $just_tag;
+		}
+
+		foreach ($params as $name => $value) {
+			if ($value === false) {
+				continue;
+			}
+			$html .= ' ' . $name;
+			if ($value === true) {
+				continue;
+			}
+			$html .= '="' . $value . '"';
+		}
+		$html .= '>';
+
+		if ($content !== false) {
+			if (strlen($content) > 40 && $tag != 'li') {
+				$content = str_replace("\n", "\n  ", "\n" . $content) . "\n";
+			}
+			$html .= $content;
+			$html .= '</' . $tag .'>';
+		}
+		return $html;
+	}
+
+	// make [icon]'s come alive
+	public function iconize($label)
+	{
+		return preg_replace_callback('|\[[^]]*\]|',
+			function ($icon) {
+				return '<i class="fa fa-' . substr($icon[0], 1, -1) . '"></i>';
+			},
+			$label);
 	}
 
 	// set the Table and View pointers
@@ -117,7 +118,6 @@ class BMore {
 		}
 		$view = $table['views'][$view_name];
 	}
-
 
 	// DATABASE HANDLING
 
@@ -264,7 +264,6 @@ class BMore {
 		return $fields;
 	}
 
-
 	// VIEW GENERATION
 
 	// returns html 'get' url
@@ -374,7 +373,7 @@ class BMore {
 		$html = array();
 		foreach ($data as $tag => $contains)
 		{
-			$html[] = htmlTag($tag, array(), $this->viewHtml($contains,$context, $contents));
+			$html[] = $this->tag($tag, array(), $this->viewHtml($contains,$context, $contents));
 		}
 		return implode("\n", $html);
 	}
@@ -386,13 +385,13 @@ class BMore {
 		$scripts = array();
 		$url = $this->getAjaxUrl(array('command'=>'getJSON'));
 		$params = empty($data['params']) ? array() : $data['params'];
-		$params['id'] = getId('table');
+		$params['id'] = $this->getId('table');
 		$params['data-url'] = $this->getAjaxUrl(array('command' => 'getJSON'));
 
 		$html = array();
 		if (!empty($data['toolbar'])) {
-			$id = getId('toolbar');
-			$html[] = htmlTag('div', array('id' => $id), $this->htmlLinks($data['toolbar']));
+			$id = $this->getId('toolbar');
+			$html[] = $this->tag('div', array('id' => $id), $this->htmlLinks($data['toolbar']));
 			$params['data-toolbar'] = '#' . $id;
 		}
 
@@ -408,11 +407,11 @@ class BMore {
 				$scripts[$script_name] = str_replace('$module_name', $this->module_name, $field['data-formatter']);
 				$th_params['data-formatter'] = $script_name;
 			}
-			$tr[] = htmlTag('th', $th_params, $field['header']);
+			$tr[] = $this->tag('th', $th_params, $field['header']);
 		}
-		$html[] = htmlTag('table', $params,
-				htmlTag('thead', array(),
-					htmlTag('tr', array(), implode("\n", $tr))
+		$html[] = $this->tag('table', $params,
+				$this->tag('thead', array(),
+					$this->tag('tr', array(), implode("\n", $tr))
 				)
 			);
 
@@ -421,7 +420,7 @@ class BMore {
 			foreach ($scripts as $name => $script) {
 				$js .= 'function '.$name.'(value, row, index){'.str_replace("\n", "\n  ", "\n".$script)."\n} ";
 			}
-			$html[] = htmlTag('script', array('type' => 'text/javascript'), $js);
+			$html[] = $this->tag('script', array('type' => 'text/javascript'), $js);
 		}
 		return implode("\n", $html);
 	}
@@ -435,7 +434,7 @@ class BMore {
 			'class' => 'fpbx-submit',
 			'action' => '',
 			'method' => 'post',
-			'id' => getId('form'),
+			'id' => $this->getId('form'),
 			// needs a name ?
 		);
 		$id = false;
@@ -449,7 +448,7 @@ class BMore {
 			$values = $this->getRecord($context->table, array('id' => $id));
 			if (!$values) $values = array();
 		}
-		$form_contents[] = htmlTag('input', array(
+		$form_contents[] = $this->tag('input', array(
 			'type' => 'hidden',
 			'name' => 'action',
 			'value' => $hidden_action_value
@@ -468,9 +467,9 @@ class BMore {
 			if (!empty($field['select'])) {
 				$options = array();
 				foreach ($field['select'] as $value => $text) {
-					$options[] = htmlTag('option', array('value' => $value), $text);
+					$options[] = $this->tag('option', array('value' => $value), $text);
 				}
-				$form_field = htmlTag('select', array(
+				$form_field = $this->tag('select', array(
 					'class' => 'form-control',
 					'id' => $name,
 					'name' => $name,
@@ -478,24 +477,24 @@ class BMore {
 			} else if (strtoupper($field['sqltype']) == 'TINYINT(1)') {
 				$form_field_class=' radioset';
 				$form_field =
-					htmlTag('input', array(
+					$this->tag('input', array(
 						'type' => 'radio',
 						'id' => $name.'-yes',
 						'name' => $name,
 						'value' => '1',
 						'CHECKED' => ($value != 0))
 					)."\n".
-					htmlTag('label', array('for' => $name.'-yes'), 'Yes')."\n".
-					htmlTag('input', array(
+					$this->tag('label', array('for' => $name.'-yes'), 'Yes')."\n".
+					$this->tag('input', array(
 						'type' => 'radio',
 						'id' => $name.'-no',
 						'name' => $name,
 						'value' => '0',
 						'CHECKED' => ($value == 0))
 					)."\n".
-					htmlTag('label', array('for' => $name.'-no'), 'No');
+					$this->tag('label', array('for' => $name.'-no'), 'No');
 			} else {
-				$form_field = htmlTag('input', array(
+				$form_field = $this->tag('input', array(
 					'type' => $field['type'],
 					'class' => 'form-control',
 					'id' => $name,
@@ -503,31 +502,31 @@ class BMore {
 					'value' => $value,
 				));
 			}
-			$form_contents[] = htmlTag('div', 'element-container',
-				htmlTag('div', 'row',
-					htmlTag('div', 'col-md-12',
-						htmlTag('div', 'row',
-							htmlTag('div', 'form-group',
-								htmlTag('div', 'col-md-3',
-									htmlTag('label', array(
+			$form_contents[] = $this->tag('div', 'element-container',
+				$this->tag('div', 'row',
+					$this->tag('div', 'col-md-12',
+						$this->tag('div', 'row',
+							$this->tag('div', 'form-group',
+								$this->tag('div', 'col-md-3',
+									$this->tag('label', array(
 										'class' => 'control-label',
 										'for' => $name
 									), $field['header']).
-									htmlTag('i', array(
+									$this->tag('i', array(
 										'class' => 'fa fa-question-circle fpbx-help-icon',
 										'data-for' => $name
 									), "")
 								).
-								htmlTag('div', 'col-md-9'.$form_field_class,
+								$this->tag('div', 'col-md-9'.$form_field_class,
 									$form_field
 								)
 							)
 						)
 					)
 				)."\n".
-				htmlTag('div', 'row',
-					htmlTag('div', 'col-md-12',
-						htmlTag('span', array(
+				$this->tag('div', 'row',
+					$this->tag('div', 'col-md-12',
+						$this->tag('span', array(
 							'id' => $name.'-help',
 							'class' => 'help-block fpbx-help-block'
 						), $field['help'])
@@ -535,9 +534,8 @@ class BMore {
 				)
 			);
 		}
-		return htmlTag('form', $form_params, implode("\n", $form_contents));
+		return $this->tag('form', $form_params, implode("\n", $form_contents));
 	}
-
 
 	// OTHER NOT SCHEMA-DRIVEN VIEW GENERATORS
 
@@ -558,19 +556,19 @@ class BMore {
 			'aria-label' => 'Close'
 		);
 
-		return htmlTag('div', $modal_params,
-			htmlTag('div', 'modal-dialog',
-				htmlTag('div', 'modal-content',
-					htmlTag('div', 'modal-header',
-						htmlTag('button', $close_params,
-							htmlTag('span', array('aria-hidden' => 'true'),
+		return $this->tag('div', $modal_params,
+			$this->tag('div', 'modal-dialog',
+				$this->tag('div', 'modal-content',
+					$this->tag('div', 'modal-header',
+						$this->tag('button', $close_params,
+							$this->tag('span', array('aria-hidden' => 'true'),
 								'&times;')
 						)."\n".
-						htmlTag('h4', array('class' => 'modal-title', 'id' => $id.'Label'),
-							htmlIconize($header)
+						$this->tag('h4', array('class' => 'modal-title', 'id' => $id.'Label'),
+							$this->iconize($header)
 						)
 					)."\n".
-					htmlTag('div', 'modal-body',
+					$this->tag('div', 'modal-body',
 						$this->getViewAsHtml($this->getContext($view_name))
 					)
 				)
@@ -590,27 +588,27 @@ class BMore {
 			if ($link[0] == '@') {
 				// modal link to another view
 				$modal_view = substr($link, 1);
-				$modal_id = getId('modal');
-				$sword[] = htmlTag('button', array('class' => $class, 'data-toggle' => 'modal',
+				$modal_id = $this->getId('modal');
+				$sword[] = $this->tag('button', array('class' => $class, 'data-toggle' => 'modal',
 					'data-target' => '#'.$modal_id),
-					htmlIconize($text));
+					$this->iconize($text));
 				$tail[] = $this->getModalDialogView($text, $modal_id, $modal_view);
 			} else if (is_array($link)) {
-				$sword[] = htmlTag('div', 'btn-group',
-					htmlTag('button',
+				$sword[] = $this->tag('div', 'btn-group',
+					$this->tag('button',
 						array('class' => "$class dropdown-toggle", 'type' => 'button',
 							'data-toggle' => 'dropdown', 'aria-expanded' => 'false'),
-						htmlIconize($text) . ' ' . htmlTag('span class="caret"')
+						$this->iconize($text) . ' ' . $this->tag('span class="caret"')
 					)."\n".
-					htmlTag('ul', array('class' => 'dropdown-menu', 'role' => 'menu'),
+					$this->tag('ul', array('class' => 'dropdown-menu', 'role' => 'menu'),
 						$this->htmlLinksRecursor($link, true, $tail))
 				);
 			} else if ($subitem) {
-				$sword[] = htmlTag('li', array(),
-					htmlTag('a', array('class' => $class, 'href' => $link), htmlIconize($text))
+				$sword[] = $this->tag('li', array(),
+					$this->tag('a', array('class' => $class, 'href' => $link), $this->iconize($text))
 				);
 			} else {
-				$sword[] = htmlTag('a', array('class' => $class, 'href' => $link), htmlIconize($text)) ;
+				$sword[] = $this->tag('a', array('class' => $class, 'href' => $link), $this->iconize($text)) ;
 			}
 		}
 		return implode("\n", $sword);
@@ -634,7 +632,7 @@ class BMore {
 		echo "\n";
 	}
 
-	// DEFAULT BMO HANDLERS
+	// DEFAULT BMO HANDLERS (override as needed)
 
 	// right side pop-out navigation bar
 	public function getRightNav($request) {
@@ -701,7 +699,7 @@ class BMore {
 				case 'delete':
 					$this->deleteRecord($this->context->table, $_REQUEST);
 				break;
-				case 'reinstall': // dev util for schema change
+				case 'reinstall': // dev util for db schema change (also erases all data)
 					echo '<pre>';
 					$this->uninstall();
 					$this->install();
